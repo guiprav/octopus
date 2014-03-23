@@ -16,6 +16,7 @@
   },
   "homepage": "https://github.com/n2liquid/octopus",
   "dependencies": {
-    "express": "^3.5.0"
+    "express": "^3.5.0",
+    "forever": "^0.10.11"
   }
 }
