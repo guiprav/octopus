@@ -21,9 +21,24 @@ var fs = require('fs');
 var http = require('http');
 var url = require('url');
 var express = require('express');
+var args = require('./src/arguments');
 var app = express();
 app.use(express.logger());
-var paths = JSON.parse(fs.readFileSync(__dirname + '/routes.json', 'utf8'));
+var paths = (function() {
+	try {
+		return JSON.parse(fs.readFileSync(args['routes-file'], 'utf8'));
+	}
+	catch(err) {
+		console.error("Could not parse or open routes-file:", err.message);
+		process.exit(-1);
+	}
+})();
+fs.watch (
+	args['routes-file'], function() {
+		console.log("'" + args['routes-file'] + "' changed. Quitting...");
+		process.exit(0);
+	}
+);
 for(var path in paths) {
 	var target = paths[path];
 	app.use(path, route.bind(null, target));
@@ -58,7 +73,6 @@ function route(target, req, res) {
 	req.pipe(target_req);
 }
 (function start() {
-	var port = process.env.PORT || 3000;
-	app.listen(port);
-	console.log("Octopus server started on port", port + ".");
+	app.listen(args.port);
+	console.log("Octopus server started on port", args.port + ".");
 })();

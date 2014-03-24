@@ -3,9 +3,7 @@ var spawn = require('child_process').spawn;
 var server = spawn (
 	__dirname + '/node_modules/forever/bin/forever'
 	, [
-		'-w',
-		'--watchDirectory', __dirname
-		, __dirname + '/octopus.js'
+		__dirname + '/octopus.js'
 	]
 	.concat(process.argv.slice(2))
 );
