@@ -22,57 +22,112 @@ var http = require('http');
 var url = require('url');
 var express = require('express');
 var args = require('./src/arguments');
-var app = express();
-app.use(express.logger());
-var paths = (function() {
-	try {
-		return JSON.parse(fs.readFileSync(args['routes-file'], 'utf8'));
-	}
-	catch(err) {
-		console.error("Could not parse or open routes-file:", err.message);
-		process.exit(-1);
-	}
-})();
-fs.watch (
-	args['routes-file'], function() {
-		console.log("'" + args['routes-file'] + "' changed. Quitting...");
-		process.exit(0);
+function load_routes(cb) {
+	fs.readFile (
+		args['routes-file'], { encoding: 'utf8' }, function(err, data) {
+			if(err) {
+				cb(err);
+				return;
+			}
+			try {
+				data = JSON.parse(data);
+			}
+			catch(err) {
+				cb(err);
+				return;
+			}
+			cb(null, data);
+		}
+	);
+}
+load_routes (
+	function(err, routes) {
+		if(err) {
+			console.error("Failed to load routes:", err.message);
+			if(args.forever) {
+				console.log("Server will not start (But will poll file for updates.)");
+			}
+			return;
+		}
+		start_server(routes);
 	}
 );
-for(var path in paths) {
-	var target = paths[path];
-	app.use(path, route.bind(null, target));
-}
-function route(target, req, res) {
-	var request_tail = req.url;
-	if(request_tail === '/' && req.originalUrl[req.originalUrl.length - 1] !== '/') {
-		request_tail = '';
+function start_server(paths) {
+	var app = express();
+	app.use(express.logger());
+	for(var path in paths) {
+		var target = paths[path];
+		app.use(path, route.bind(null, target));
 	}
-	target = url.parse(target + request_tail);
-	var target_req = http.request ({
-		hostname: target.hostname
-		, port: target.port
-		, auth: target.auth
-		, method: req.method
-		, path: target.path
-		, headers: req.headers
-	});
-	target_req.once (
-		'response', function(target_res) {
-			res.status(target_res.statusCode);
-			res.set(target_res.headers);
-			target_res.pipe(res);
+	function route(target, req, res) {
+		var request_tail = req.url;
+		if(request_tail === '/' && req.originalUrl[req.originalUrl.length - 1] !== '/') {
+			request_tail = '';
 		}
-	);
-	target_req.on (
-		'error', function(err) {
-			res.status(500);
-			res.send(err);
-		}
-	);
-	req.pipe(target_req);
+		target = url.parse(target + request_tail);
+		var target_req = http.request ({
+			hostname: target.hostname
+			, port: target.port
+			, auth: target.auth
+			, method: req.method
+			, path: target.path
+			, headers: req.headers
+		});
+		target_req.once (
+			'response', function(target_res) {
+				res.status(target_res.statusCode);
+				res.set(target_res.headers);
+				target_res.pipe(res);
+			}
+		);
+		target_req.on (
+			'error', function(err) {
+				res.status(500);
+				res.send(err);
+			}
+		);
+		req.pipe(target_req);
+	}
+	(function listen() {
+		app.listen(args.port);
+		console.log("Octopus server started on port", args.port + ".");
+	})();
 }
-(function start() {
-	app.listen(args.port);
-	console.log("Octopus server started on port", args.port + ".");
-})();
+function stat_routes_file() {
+	fs.stat (
+		args['routes-file'], function(err, stats) {
+			if(err) {
+				set_stat_routes_file_timeout();
+				return;
+			}
+			var mtime = stats.mtime.getTime();
+			var last_mtime = stat_routes_file.last_mtime;
+			if(mtime > last_mtime) {
+				load_routes (
+					function(err) {
+						if(!err) {
+							console.log("Newer valid routes file found. Quitting...");
+							process.exit(0);
+						}
+						else {
+							console.log("Newer routes file found, but load failed:", err.message);
+							console.log("Ignoring...");
+							set_stat_routes_file_timeout();
+						}
+					}
+				);
+			}
+			else {
+				set_stat_routes_file_timeout();
+			}
+			stat_routes_file.last_mtime = mtime;
+		}
+	);
+}
+stat_routes_file.last_mtime = fs.statSync(args['routes-file']).mtime.getTime();
+function set_stat_routes_file_timeout() {
+	setTimeout(stat_routes_file, 500);
+}
+if(args.forever) {
+	set_stat_routes_file_timeout();
+}

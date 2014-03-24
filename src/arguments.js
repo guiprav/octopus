@@ -17,6 +17,7 @@
 	License along with Octopus. If not, see <http://www.gnu.org/licenses/>.
 */
 var defaults = {};
+defaults.forever = false;
 defaults.port = 3000;
 var parsed = require('minimist')(process.argv.slice(2));
 var log = console.log;
@@ -72,6 +73,9 @@ for(var name in parsed) {
 		case 'port':
 			ensure_not_boolean('-p / --port', value);
 			args.port = value;
+			break;
+		case 'forever':
+			args.forever = value;
 			break;
 		default:
 			console.error("Unrecognized option: '" + name + "'.");

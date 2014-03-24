@@ -23,7 +23,10 @@ var server = spawn (
 	, [
 		__dirname + '/octopus.js'
 	]
-	.concat(process.argv.slice(2))
+	.concat (
+		process.argv.slice(2)
+		, '--forever'
+	)
 );
 server.stderr.pipe(process.stderr);
 server.stdout.pipe(process.stdout);
