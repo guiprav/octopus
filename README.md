@@ -36,7 +36,7 @@ _Routes are matched in order,_ so in case ambiguous routes are present, the firs
 Danger, Will Robinson! Danger!
 ------------------------------
 
-Care should be taken when serving multiple web servers via the same domain (host) name. This should only be used if all web servers under the same domain are mutually trustful and will be careful not to, among other things, unwillingly destroy or be confused by each others cookies.
+Care should be taken when serving multiple web servers via the same domain (host) name. This should only be used if all web servers under the same host are mutually trustful and will be careful not to, among other things, unwillingly destroy or be confused by each others cookies.
 
 Remember, browser cookies work on a per-host + port + protocol basis. That combination is called an "origin." Even if two different servers are actually serving the requests via Octopus, to the browser, it all looks like a single server.
 
