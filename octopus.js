@@ -82,8 +82,18 @@ function start_server(paths) {
 		);
 		target_req.on (
 			'error', function(err) {
-				res.status(500);
-				res.send(err);
+				switch(err.code) {
+					case 'ECONNREFUSED':
+						res.send(521, "Server is down.");
+						break;
+					case 'ETIMEDOUT':
+						res.send(522, "Connection timed out.");
+						break;
+					default:
+						console.error("An unexpected connection error has occurred:", err);
+						res.send(500, "Internal server error.");
+						break;
+				}
 			}
 		);
 		req.pipe(target_req);
